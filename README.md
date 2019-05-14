@@ -3,6 +3,8 @@ MicroPython.js
 
 MicroPython transmuted into Javascript (WASM) by Emscripten.
 
+Official Repo https://github.com/micropython/micropython/tree/master/ports/javascript
+
 Running with Node.js
 --------------------
 
