@@ -1,0 +1,28 @@
+{
+  "name": "micropython",
+  "version": "1.0.1",
+  "description": "A WASM module built from the official MicroPython port",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rafi16jan/micropython-wasm.git"
+  },
+  "keywords": [
+    "python",
+    "micropython",
+    "wasm",
+    "webassembly"
+  ],
+  "author": "MicroPython",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rafi16jan/micropython-wasm/issues"
+  },
+  "homepage": "https://github.com/rafi16jan/micropython-wasm#readme"
+}
