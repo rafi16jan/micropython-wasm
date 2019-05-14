@@ -17,7 +17,20 @@ mp_js.do_str("print('hello world')\n");
 
 Running with Webpack
 -----------------
-TODO
+Running MicroPython on Webpack is a little bit tricky. It expects the firmware.wasm file at /static/js/firmware.wasm. So a simple solution is to make static and js folder on webpack's public directory and put firmware.wasm on it. (PR is accepted for a better solution)
+
+```
+mkdir -p public/static/js
+cp node_modules/micropython/lib/firmware.wasm public/static/js
+```
+
+And import it on your Javascript file
+
+```javascript
+import mp_js from 'micropython';
+mp_js.init(64 * 1024);
+mp_js.do_str("print('hello world')\n");
+```
 
 API
 ---
