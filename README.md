@@ -48,7 +48,7 @@ called before attempting to interact with MicroPython.
 do_str(code)
 ```
 
-Execute the input code. `code` must be a `string`.
+Execute the input code. `code` must be a `string`. Returns a promise resulting an stdout.
 
 ```
 init_repl()
