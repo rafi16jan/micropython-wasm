@@ -105,6 +105,9 @@ import mp_js from 'micropython';
   await mp_js;
   await mp_js.init_python(64 * 1024);
   await mp_js.do_str(`
+  
+  import js
+  
   #This function executes every line one by one and await promise if it returns a promise
   exec("""
   
