@@ -31,7 +31,7 @@ On production/actual code use AsyncFunction or Promise to get the guaranteed res
 
 ```javascript
 (async () => { //AsyncFunction
-  const mp_js = require('micropython');
+  const mp_js = await require('micropython');
 
   mp_js.init(64 * 1024);
   await mp_js.do_str("variable1 = {'data1': 1}");
