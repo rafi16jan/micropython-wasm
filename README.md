@@ -99,26 +99,30 @@ init_python(stack_size)
 NEW!! This function execute js.py to expose JS API to Python, even some helper function and experimental asynchronous queue/stack logic. Example:
 
 ```javascript
-import mp_js from 'micropython';
+mp_js = require('micropython');
 
 (async () => {
   await mp_js;
   await mp_js.init_python(64 * 1024);
   await mp_js.do_str(`
-  
+
   import js
-  
-  #This function executes every line one by one and await promise if it returns a promise
+
+  #This function executes every line but exit the event loop if wait function is called and resumes after it resolve
   exec("""
-  
-  require = JS('require')
-  fetch = require('node-fetch') #Or do JS('window.fetch') on browser
+
+  fetch = False
+  if isbrowser:
+     fetch = JS('fetch')
+  else:
+     require = JS('require')
+     fetch = require('node-fetch')
   response = fetch('https://github.com')
-  response = wait(response) #This is the 'await' equivalent
+  response = wait(response)
   result = response.text()
   result = wait(result)
-  print(result) #Print the resulting HTML
-  
+  print(result)
+
   """)
   `);
 })();

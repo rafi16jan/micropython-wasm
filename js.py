@@ -85,7 +85,7 @@ class JSObject():
         name = self._name + '.' + key
         js_exec("""
           let object = {0};
-          if (object.constructor === Promise) {
+          if (object && object.constructor === Promise) {
             await global.mp_js_do_str(`
               import js
               objcache['{0}'] = JSPromise('{0}')
@@ -97,7 +97,7 @@ class JSObject():
             if (object && object.constructor === Object) for (let key in Object.keys(object)) {
               if (object.indexOf(key) < 0) throw Error('Not a JSON');
             }
-            else if (object && object.constructor === Function || (object && object.constructor && object.constructor.name === 'AsyncFunction')) {
+            else if (object && (object.constructor === Function || object.constructor === AsyncFunction)) {
               delete global.mpjscache['{0}'];
               return global.mp_js_do_str(`
                 import js
@@ -141,7 +141,7 @@ def JSFunction(name):
           }
           //object = object(...{1});
           global.mpjscache['{0}'] = object;
-          if (object.constructor === Promise) {
+          if (object && object.constructor === Promise) {
             await global.mp_js_do_str(`
               import js
               funcache['{0}'] = JSPromise('{0}')
@@ -154,7 +154,7 @@ def JSFunction(name):
             if (object && object.constructor === Object) for (let key in Object.keys(object)) {
               if (object.indexOf(key) < 0) throw Error('Not a JSON');
             }
-            else if (object.constructor === Function || (object.constructor && object.constructor.name === 'AsyncFunction')) {
+            else if (object && (object.constructor === Function || object.constructor === AsyncFunction)) {
               return global.mp_js_do_str(`
                 import js
                 resolve(funcache, '{0}', JSFunction('{0}'))
@@ -180,7 +180,7 @@ def JSFunction(name):
 def JS(variable):
     js_exec("""
       let object = {0};
-      if (object.constructor === Promise) {
+      if (object && object.constructor === Promise) {
         await global.mp_js_do_str(`
           import js
           objcache['{0}'] = JSPromise('{0}')

@@ -18,7 +18,7 @@ global.mpjsPrintStdout = stdout_print;
 const mp = require('./lib/micropython.js');
 if (typeof window === 'undefined' && typeof importScripts === 'undefined') {
   browser = false;
-  pyjs = require('fs').readFileSync('./js.py', {pwd: __dirname});
+  pyjs = require('fs').readFileSync(__dirname + '/js.py').toString();
 }
 else {
   pyjs = require('!raw-loader!./js.py');
@@ -44,6 +44,8 @@ if (browser) {
 
 global.AsyncFunction = (async () => {}).constructor;
 
+let python_browser;
+
 module.exports = (async () => {
   await wait_exist(() => global.mp_js_init);
   const methods = {}
@@ -53,10 +55,10 @@ module.exports = (async () => {
     const codes = code.split('\n');
     let spaces = '';
     for (let line of codes) {
-      if (!line) continue;
+      if (!line || !line.match(/[a-z]/i)) continue;
       let index = 0;
       for (let word of line) {
-        if (index === 0 && word !== ' ') break;
+        if (index === 0 && word.match(/[a-z]/i)) break;
         if (word === ' ') spaces += ' ';
         index += 1;
       }
@@ -72,16 +74,26 @@ module.exports = (async () => {
       }
       if (concurrent) {
         const result = [];
+        let code_cache = [];
         for (var each of new_code) {
           let await_code;
           if (each.indexOf(' = wait(') > -1) {
+            if (code_cache.length > 0) {
+              result.push(await global.mp_js_do_str(code_cache.join('\n'), false));
+              code_cache = [];
+            }
             const [variable, wait] = each.split(' = ')
             const promise = wait.slice(5, -1);
             await_code = variable + ' = ' + promise + '._value';
           }
+          else {
+            code_cache.push(each);
+            continue;
+          }
           result.push(await global.mp_js_do_str(each, false));
           if (await_code) await global.mp_js_do_str(await_code, false);
         }
+        if (code_cache.length > 0) result.push(await global.mp_js_do_str(code_cache.join('\n'), false));
         return result.join('\n');
       }
       code = new_code.join('\n');
@@ -96,6 +108,13 @@ module.exports = (async () => {
   }
   methods.init_python = async (stack) => {
     methods.init(stack);
+    if (!python_browser) {
+      await methods.do_str(`
+        import json
+        isbrowser = json.loads('${browser}')
+      `);
+      python_browser = true;
+    }
     return await methods.do_str(pyjs);
   }
   global.mp_js_do_str = methods.do_str;
