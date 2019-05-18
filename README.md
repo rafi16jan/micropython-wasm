@@ -35,7 +35,7 @@ On production/actual code use AsyncFunction or Promise to get the guaranteed res
 
   mp_js.init(64 * 1024);
   await mp_js.do_str("variable1 = {'data1': 1}");
-  await mp_js.do_str("variable1.get('data1')"); //Access variables for previous event loop
+  await mp_js.do_str("variable1.get('data1')"); //Access variables from the previous event loop
 })();
 ```
 
