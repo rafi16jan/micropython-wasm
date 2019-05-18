@@ -18,8 +18,9 @@ global.mpjsPrintStdout = stdout_print;
 const mp = require('./lib/micropython.js');
 if (typeof window === 'undefined' && typeof importScripts === 'undefined') {
   browser = false;
-  pyjs = require('fs').readFileSync('./js.py');
-} else {
+  pyjs = require('fs').readFileSync('./js.py', {pwd: __dirname});
+}
+else {
   pyjs = require('!raw-loader!./js.py');
 }
 
