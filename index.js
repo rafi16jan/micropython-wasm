@@ -10,10 +10,11 @@ let stdout_print = (stdout) => {
   if (stdout_text.indexOf('mpjsendline') > -1) {
     stdout_text = stdout_text.replace('mpjsendline', '');
     stdout_ready = true;
-    console.log(stdout_text);
+    //console.log(stdout_text);
   }  
 }
 global.mpjsPrintStdout = stdout_print;
+global.formatString = (object) => object !== undefined ? JSON.stringify(object) : null
 
 const mp = require('./lib/micropython.js');
 if (typeof window === 'undefined' && typeof importScripts === 'undefined') {
@@ -52,10 +53,7 @@ module.exports = (async () => {
   methods.init = global.mp_js_init;
   const do_str = global.mp_js_do_str;
   global._mp_js_do_str = do_str;
-  methods.do_str = async (code, concurrent) => {
-    code = code.replace(/async {/g, 'async_py(lambda **kwargs: """').replace(/} async/g, '""")');
-    //code = code.replace(/async {/g, 'exec("""').replace(/} async/g, '""")');
-    code = code.replace(/:async:/g, 'return """').replace(/return async/g, '"""');
+  methods.do_str = async (code) => {
     const codes = code.split('\n');
     let spaces = '';
     for (let line of codes) {
@@ -68,47 +66,18 @@ module.exports = (async () => {
       }
       break;
     }
-    if (spaces || concurrent) {
-      if (concurrent && !spaces) spaces = ' ';
+    if (spaces) {
       let index_split = 0;
       const new_code = [];
       for (let line of codes) {
         line = line.slice(spaces.length - 1);
         new_code.push(line);
       }
-      if (concurrent) {
-        const result = [];
-        let code_cache = [];
-        for (var each of new_code) {
-          let await_code;
-          if (each.indexOf('await ') > -1) each = each.replace('await', 'wait(') + ')';
-          if (each.indexOf('wait(') > -1 && each.indexOf('def wait(promise') < 0) {
-            if (code_cache.length > 0) {
-              result.push(await global.mp_js_do_str(code_cache.join('\n'), false));
-              code_cache = [];
-            }
-            
-            if (each.indexOf(' = wait(') > -1) {
-              const [variable, wait] = each.split(' = ')
-              const promise = wait.slice(5, -1);
-              await_code = variable + ' = ' + promise + '._value';
-            }
-          }
-          else {
-            code_cache.push(each);
-            continue;
-          }
-          result.push(await global.mp_js_do_str(each, false));
-          if (await_code) await global.mp_js_do_str(await_code, false);
-        }
-        if (code_cache.length > 0) result.push(await global.mp_js_do_str(code_cache.join('\n'), false));
-        return result.join('\n');
-      }
       code = new_code.join('\n');
     }
     stdout_text = '';
     stdout_ready = false;
-    code += "\nprint('mpjsendline')";
+    code += "\ntry: py_print('mpjsendline')\nexcept: print('mpjsendline')";
     if (global.promiseWaitInterval) await wait_exist(() => !global.promiseWaitInterval);
     do_str(code);
     await wait_exist(() => stdout_ready);

@@ -1,73 +1,31 @@
 import json
 import js
-dircache = {}
-objcache = {}
-funcache = {}
-procache = {}
-
-#Javascript's JSON Types for eliminating json.loads
-true = True
-false = False
-null = None
-undefined = None
 
 def js_exec(code, *args):
     code = format(code, *args)
-    return js.exec('(async () => {\n' + code + '\n})();')
+    result = js.exec('formatString((() => {\n' + code + '\n})());')
+    return json.loads(result)
 
-def py_exec(code, *args):
-    code = format(code, *args)
-    return js.exec('(async () => {\nreturn await global.mp_js_do_str(`\n' + code + '\n`, true);\n})();')
-exec = py_exec
+def js_print(value):
+    js.exec('console.log(%s)' % (json.dumps(str(value))))
+
+py_print = print
+print = js_print
 
 def format(string, *args):
     for index, arg in enumerate(args):
         string = string.replace('{%s}' % (index), str(arg))
     return string
 
-#def print(value):
-#    js.exec("""console.log(`%s`)""" % (str(value)))
-
 def wait(promise):
-    procache[promise._name] = promise
-    js_exec("""
-      global.promiseWaitInterval = setInterval(() => {
-        const object = global.mpjscache['{0}'];
-        //console.log(object)
-        if (object && object.constructor !== Promise) {
-          clearInterval(global.promiseWaitInterval);
-          global.promiseWaitInterval = undefined;
-          global.mp_js_do_str(`
-            import js
-            procache['{0}']._resolved = True
-            procache['{0}']._value = JS('global.mpjscache["{0}"]')
-            procache['{0}'] = procache['{0}']._value
-          `);
-        }
-      }, 500);
-    """, promise._name)
-    exit
-
-def resolve(cache, name, value):
-    object = cache.get(name)
-    if type(object) == JSPromise:
-       cache[name] = object.resolve(value)
-    else:
-       cache[name] = value
-
-async_id = 0
-
-def async_py(function):
-    def wrap(**kwargs):
-        code_string = function(**kwargs)
-        for key in kwargs:
-            if key not in code_string: continue
-            async_id += 1
-            asycache[async_id] = kwargs[key]
-            code_string = code_string.replace(key, 'asycache[%s]' % (async_id))
-        exec(code_string)
-        exit
-    return wrap
+    while not promise._resolved:
+        js.sleep(250)
+        result = js_exec('''
+          const object = {0};
+          if (object && object.constructor !== Promise) return true;
+        ''', promise._name)
+        if result: promise.resolve(JS(promise._name))
+    return promise._value
 
 class JSPromise():
 
@@ -80,6 +38,9 @@ class JSPromise():
         self._resolved = True
         self._value = value
         return value
+
+    def wait(self):
+        return wait(self)
 
 class JSObject():
 
@@ -94,25 +55,17 @@ class JSObject():
 
     def __dir__(self):
         if not self._name: return []
-        js_exec("""
-          let keys = JSON.stringify(Object.keys({0}));
-          global.mp_js_do_str(`
-            import js
-            dircache['{0}'] = ${keys}
-          `);
-        """, self._name)
-        return dircache.get(self._name, [])
+        return js_exec('''
+          return Object.keys({0}));
+        ''', self._name)
 
     def __getattr__(self, key):
         name = self._name + '.' + key if self._name else key
-        js_exec("""
+        result = js_exec('''
           let object = {0};
           if (object && object.constructor === Promise) {
-            await global.mp_js_do_str(`
-              import js
-              objcache['{0}'] = JSPromise('{0}')
-            `)
-            object = await object;
+            object.then((object) => global.mpjscache['{0}'] = object);
+            return 'mpjspromiseobject:{0}';
           }
           try {
             if (object && [Array, Object, Number, String, Boolean, Function, AsyncFunction].indexOf(object.constructor) < 0) throw Error('Not JSON Serializable');
@@ -121,40 +74,36 @@ class JSObject():
             }
             else if (object && (object.constructor === Function || object.constructor === AsyncFunction)) {
               delete global.mpjscache['{0}'];
-              return global.mp_js_do_str(`
-                import js
-                resolve(objcache, '{0}', JSFunction('{0}'))
-              `);
+              return 'mpjsfunctionobject:{0}';
             }
-            object = object !== undefined ? JSON.stringify(object) : 'null';
-            return global.mp_js_do_str(`
-              import js
-              import json
-              resolve(objcache, '{0}', ${object})
-            `);
+            return object;
           }
           catch(error) {
-            return global.mp_js_do_str(`
-              import js
-              resolve(objcache, '{0}', JSObject('{0}'))
-            `);
+            return 'mpjsjavascriptobject:{0}';
           }
-        """, name)
-        return objcache.get(name)
+        ''', name)
+        if type(result) != str: return result
+        types = {'promise': JSPromise, 'function': JSFunction, 'javascript': JSObject}
+        for object_type in types:
+            if 'mpjs' + object_type + 'object' in result:
+               result = types[object_type](result.split(':')[1])
+               break
+        return result
 
     def __setattr__(self, key, value):
         if not self._name: return
         value = json.dumps(value)
         object_name = self._name + '.' + key
-        js_exec("""
+        js_exec('''
           {0} = {1};
-        """.format(object_name, value))
+        ''', object_name, value)
 
 def JSFunction(name):
     short_name = name.split('.')[-1]
     def function(*args):
         args = json.dumps(list(args))
-        js_exec("""
+        cache_name = 'global.mpjscache' + ('.' + name if '.' not in name else json.dumps([name]))
+        result = js_exec('''
           let object;
           if (global.mpjscache['{0}']) {
             object = global.mpjscache['{0}'](...{1});
@@ -162,42 +111,32 @@ def JSFunction(name):
           else if ({0}) {
             object = {0}(...{1});
           }
-          //object = object(...{1});
           global.mpjscache['{0}'] = object;
           if (object && object.constructor === Promise) {
-            await global.mp_js_do_str(`
-              import js
-              funcache['{0}'] = JSPromise('{0}')
-            `)
-            object = await object;
+            object.then((object) => global.mpjscache['{0}'] = object);
+            return 'mpjspromiseobject';
           }
-          global.mpjscache['{0}'] = object;
           try {
             if (object && [Array, Object, Number, String, Boolean, Function, AsyncFunction].indexOf(object.constructor) < 0) throw Error('Not JSON Serializable');
             if (object && object.constructor === Object) for (let key in Object.keys(object)) {
               if (object.indexOf(key) < 0) throw Error('Not a JSON');
             }
             else if (object && (object.constructor === Function || object.constructor === AsyncFunction)) {
-              return global.mp_js_do_str(`
-                import js
-                resolve(funcache, '{0}', JSFunction('{0}'))
-              `);
+              return 'mpjsfunctionobject';
             }
-            object = object !== undefined ? JSON.stringify(object) : 'null';
-            return global.mp_js_do_str(`
-              import js
-              import json
-              resolve(funcache, '{0}', ${object})
-            `);
+            return object;
           }
           catch(error) {
-            return global.mp_js_do_str(`
-              import js
-              resolve(funcache, '{0}', JSObject('global.mpjscache{2}'))
-            `);
+            return 'mpjsjavascriptobject';
           }
-        """, name, args, '.' + name if '.' not in name else '["%s"]' % (name))
-        return funcache.get(name)
+        ''', name, args)
+        if type(result) != str: return result
+        types = {'promise': JSPromise, 'function': JSFunction, 'javascript': JSObject}
+        for object_type in types:
+            if 'mpjs' + object_type + 'object' in result:
+               result = types[object_type](cache_name)
+               break
+        return result
     return function
 
 def JS(variable):
@@ -208,15 +147,10 @@ def JS(variable):
 #result = require('fs').readFileSync('./test.js').toString()
 #print(result)
 
-#This code block is adaptable to Javascript's event loop
-async {
+#New API promise.wait(), now works without skipping event loop using emscripten_sleep, requires emterpreter
 
-require = JS('require')
-response = require('node-fetch')('https://github.com/')
-response = await response
-print(response)
-result = response.text()
-result = await result
-print(result)
-
-} async ()
+#require = JS('require')
+#response = require('node-fetch')('https://github.com/').wait()
+#print(response)
+#result = response.text().wait()
+#print(result)
