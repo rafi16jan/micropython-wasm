@@ -51,7 +51,11 @@ module.exports = (async () => {
   const methods = {}
   methods.init = global.mp_js_init;
   const do_str = global.mp_js_do_str;
+  global._mp_js_do_str = do_str;
   methods.do_str = async (code, concurrent) => {
+    code = code.replace(/async {/g, 'async_py(lambda **kwargs: """').replace(/} async/g, '""")');
+    //code = code.replace(/async {/g, 'exec("""').replace(/} async/g, '""")');
+    code = code.replace(/:async:/g, 'return """').replace(/return async/g, '"""');
     const codes = code.split('\n');
     let spaces = '';
     for (let line of codes) {
@@ -65,7 +69,7 @@ module.exports = (async () => {
       break;
     }
     if (spaces || concurrent) {
-      if (concurrent) spaces = ' ';
+      if (concurrent && !spaces) spaces = ' ';
       let index_split = 0;
       const new_code = [];
       for (let line of codes) {
@@ -77,14 +81,18 @@ module.exports = (async () => {
         let code_cache = [];
         for (var each of new_code) {
           let await_code;
-          if (each.indexOf(' = wait(') > -1) {
+          if (each.indexOf('await ') > -1) each = each.replace('await', 'wait(') + ')';
+          if (each.indexOf('wait(') > -1 && each.indexOf('def wait(promise') < 0) {
             if (code_cache.length > 0) {
               result.push(await global.mp_js_do_str(code_cache.join('\n'), false));
               code_cache = [];
             }
-            const [variable, wait] = each.split(' = ')
-            const promise = wait.slice(5, -1);
-            await_code = variable + ' = ' + promise + '._value';
+            
+            if (each.indexOf(' = wait(') > -1) {
+              const [variable, wait] = each.split(' = ')
+              const promise = wait.slice(5, -1);
+              await_code = variable + ' = ' + promise + '._value';
+            }
           }
           else {
             code_cache.push(each);
