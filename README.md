@@ -119,7 +119,7 @@ will execute MicroPython code when necessary.
 init_python(stack_size)
 ```
 
-NThis function execute js.py to expose JS API to Python, even some helper function and experimental asynchronous queue/stack logic. Example:
+This function execute js.py to expose JS Objects to Python, Example:
 
 ```javascript
 mp_js = require('micropython');
