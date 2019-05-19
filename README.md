@@ -13,6 +13,7 @@ What's New on 1.1
 
 - New Async/Await or Promise API
 - New Python classes to expose JS API and Objects like DOM API, XHR, Node.JS require, and etc
+- New Python promise class to wait promises with emscripten_sleep, using Emterpreter
 
 
 Running with Node.js
@@ -60,10 +61,31 @@ import mp_js from 'micropython';
 })();
 ```
 
-API
+
+Python API
 ---
 
-The following functions have been exposed to javascript.
+The following functions and classes is used to interact with Javascript. Load this API with ```mp_js.init_python(stack_size)```
+
+```python
+JS(variable_name)
+```
+Check for variable on Javascript's global and return the corresponding types, functions and Javascript objects instantiate JSFunction and JSObject class. Promise instantiate JSPromise class.
+
+```python
+wait(promise)
+```
+Wait for a promise to be resolved on Javascript, and then returns the value. Uses emscripten_sleep. Also available as JSPromise class function:
+
+```python
+response = JS('require')('node-fetch')('https://github.com').wait() #Returns response object
+html = response.text().wait() #Returns HTML string
+```
+
+Javascript API
+---
+
+The following functions have been exposed to Kavascript.
 
 ```
 init(stack_size)
@@ -96,7 +118,7 @@ will execute MicroPython code when necessary.
 init_python(stack_size)
 ```
 
-NEW!! This function execute js.py to expose JS API to Python, even some helper function and experimental asynchronous queue/stack logic. Example:
+NThis function execute js.py to expose JS API to Python, even some helper function and experimental asynchronous queue/stack logic. Example:
 
 ```javascript
 mp_js = require('micropython');
@@ -108,22 +130,16 @@ mp_js = require('micropython');
 
   import js
 
-  #This function executes every line but exit the event loop if wait function is called and resumes after it resolve
-  exec("""
-
   fetch = False
   if isbrowser:
      fetch = JS('fetch')
   else:
      require = JS('require')
      fetch = require('node-fetch')
-  response = fetch('https://github.com')
-  response = wait(response)
-  result = response.text()
-  result = wait(result)
+  response = fetch('https://github.com').wait()
+  result = response.text().wait()
   print(result)
-
-  """)
+  
   `);
 })();
 ```
