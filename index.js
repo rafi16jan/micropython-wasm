@@ -22,7 +22,8 @@ if (typeof window === 'undefined' && typeof importScripts === 'undefined') {
   pyjs = require('fs').readFileSync(__dirname + '/js.py').toString();
 }
 else {
-  pyjs = require('!raw-loader!./js.py');
+  window.global = window;
+  pyjs = require('!raw-loader!./js.py').default;
 }
 
 function wait_exist(fn) {
@@ -45,15 +46,17 @@ if (browser) {
 
 global.AsyncFunction = (async () => {}).constructor;
 
-let python_browser;
+let initiated;
+let pyjs_initiated;
 
 module.exports = (async () => {
   await wait_exist(() => global.mp_js_init);
   const methods = {}
-  methods.init = global.mp_js_init;
+  const init = global.mp_js_init;
+  methods.init = (stack) => !initiated && (initiated = !init(stack));
   const do_str = global.mp_js_do_str;
   global._mp_js_do_str = do_str;
-  methods.do_str = async (code) => {
+  methods.do_str = async (code, module, initiated) => {
     const codes = code.split('\n');
     let spaces = '';
     for (let line of codes) {
@@ -66,6 +69,18 @@ module.exports = (async () => {
       }
       break;
     }
+    if (module) {
+      if (!spaces) {
+        code = code.replace(/^/gm, ' ');
+        spaces = ' ';
+      }
+      code = 'def mpjs_module():\n' + code;
+      code += '\n' + spaces + 'import sys';
+      code += '\n' + spaces + `sys.modules['${module}'] = type('${module}', (), globals())()`;
+      code += '\nmpjs_module()';
+      if (!initiated) return code;
+      spaces = '';
+    }
     if (spaces) {
       let index_split = 0;
       const new_code = [];
@@ -77,22 +92,27 @@ module.exports = (async () => {
     }
     stdout_text = '';
     stdout_ready = false;
-    code += "\ntry: py_print('mpjsendline')\nexcept: print('mpjsendline')";
+    code += "\nprint('mpjsendline')";
     if (global.promiseWaitInterval) await wait_exist(() => !global.promiseWaitInterval);
     do_str(code);
     await wait_exist(() => stdout_ready);
     return stdout_text;
   }
   methods.init_python = async (stack) => {
+    if (pyjs_initiated) return;
     methods.init(stack);
-    if (!python_browser) {
+    if (!pyjs_initiated) {
       await methods.do_str(`
         import json
         isbrowser = json.loads('${browser}')
       `);
-      python_browser = true;
+      pyjs_initiated = true;
     }
     return await methods.do_str(pyjs);
+  }
+  methods.register_module = async (module, code) {
+    if (!pyjs_initiated) return pyjs += '\n' + await methods.do_str(code, module, false);
+    return await methods.do_str(code, module, true);
   }
   global.mp_js_do_str = methods.do_str;
   methods.init_repl = global.mp_js_init_repl;

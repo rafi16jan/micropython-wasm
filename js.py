@@ -10,7 +10,6 @@ def js_print(value):
     js.exec('console.log(%s)' % (json.dumps(str(value))))
 
 py_print = print
-print = js_print
 
 def format(string, *args):
     for index, arg in enumerate(args):
