@@ -78,7 +78,8 @@ wait(promise)
 Wait for a promise to be resolved on Javascript, and then returns the value. Uses emscripten_sleep. Also available as JSPromise class function:
 
 ```python
-response = JS('require')('node-fetch')('https://github.com').wait() #Returns response object
+fetch = JS('require')('node-fetch')
+response = fetch('https://github.com').wait() #Returns response object
 html = response.text().wait() #Returns HTML string
 ```
 
