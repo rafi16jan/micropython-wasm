@@ -11,7 +11,7 @@ let stdout_print = (stdout) => {
     stdout_text = stdout_text.replace('mpjsendline', '');
     stdout_ready = true;
     //console.log(stdout_text);
-  }  
+  }
 }
 global.mpjsPrintStdout = stdout_print;
 global.formatString = (object) => object !== undefined ? JSON.stringify(object) : null
@@ -94,6 +94,7 @@ module.exports = (async () => {
     stdout_ready = false;
     code += "\nprint('mpjsendline')";
     if (global.promiseWaitInterval) await wait_exist(() => !global.promiseWaitInterval);
+    console.log(code);
     do_str(code);
     await wait_exist(() => stdout_ready);
     return stdout_text;
@@ -110,7 +111,7 @@ module.exports = (async () => {
     }
     return await methods.do_str(pyjs);
   }
-  methods.register_module = async (module, code) {
+  methods.register_module = async (module, code) => {
     if (!pyjs_initiated) return pyjs += '\n' + await methods.do_str(code, module, false);
     return await methods.do_str(code, module, true);
   }
