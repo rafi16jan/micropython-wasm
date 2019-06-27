@@ -94,7 +94,6 @@ module.exports = (async () => {
     stdout_ready = false;
     code += "\nprint('mpjsendline')";
     if (global.promiseWaitInterval) await wait_exist(() => !global.promiseWaitInterval);
-    console.log(code);
     do_str(code);
     await wait_exist(() => stdout_ready);
     return stdout_text;

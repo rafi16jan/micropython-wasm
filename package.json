@@ -1,6 +1,6 @@
 {
   "name": "micropython",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "A WASM module built from the official MicroPython port",
   "main": "index.js",
   "directories": {
