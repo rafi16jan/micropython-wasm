@@ -21,7 +21,7 @@ if (typeof webpackJsonp !== 'object') {
   pyjs = require('fs').readFileSync(__dirname + '/js.py').toString();
 }
 else {
-  pyjs = require('!raw-loader!./js.py').default;
+  pyjs = require('!raw-loader!' + './js.py').default;
 }
 
 function wait_exist(fn) {
