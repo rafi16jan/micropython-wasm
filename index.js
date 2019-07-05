@@ -18,7 +18,6 @@ global.formatString = (object) => object !== undefined ? JSON.stringify(object) 
 
 const mp = require('./lib/micropython.js');
 if (typeof webpackJsonp !== 'object') {
-  browser = false;
   pyjs = require('fs').readFileSync(__dirname + '/js.py').toString();
 }
 else {

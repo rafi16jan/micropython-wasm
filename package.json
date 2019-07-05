@@ -27,6 +27,7 @@
   "homepage": "https://github.com/rafi16jan/micropython-wasm#readme",
   "dependencies": {
     "arraybuffer-loader": "^1.0.7",
+    "babel-plugin-static-fs": "^1.2.0",
     "node-fetch": "^2.6.0",
     "raw-loader": "^2.0.0"
   }
