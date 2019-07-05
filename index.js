@@ -1,6 +1,6 @@
 global.mpjscache = {};
 let pyjs;
-let browser = true;
+const browser = (typeof window || typeof importScripts) !== 'undefined';
 let stdout_text = '';
 let stdout_ready = false;
 let stdout_print = (stdout) => {
@@ -22,7 +22,6 @@ if (typeof webpackJsonp !== 'object') {
   pyjs = require('fs').readFileSync(__dirname + '/js.py').toString();
 }
 else {
-  window.global = window;
   pyjs = require('!raw-loader!./js.py').default;
 }
 
@@ -37,6 +36,7 @@ function wait_exist(fn) {
 }
 
 if (browser) {
+  window.global = window;
   const stdout = document.createElement('div');
   stdout.id = 'mp_js_stdout';
   stdout.style.display = 'none';
