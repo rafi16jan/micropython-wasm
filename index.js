@@ -17,7 +17,7 @@ global.mpjsPrintStdout = stdout_print;
 global.formatString = (object) => object !== undefined ? JSON.stringify(object) : null
 
 const mp = require('./lib/micropython.js');
-if (typeof window === 'undefined' && typeof importScripts === 'undefined') {
+if (typeof webpackJsonp !== 'object') {
   browser = false;
   pyjs = require('fs').readFileSync(__dirname + '/js.py').toString();
 }
