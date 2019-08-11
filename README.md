@@ -57,7 +57,8 @@ import mp_js from 'micropython';
 (async () => {
   await mp_js;
   mp_js.init(64 * 1024);
-  mp_js.do_str("print('hello world')\n");
+  const stdout = await mp_js.do_str("print('hello world')\n");
+  console.log(stdout);
 })();
 ```
 
