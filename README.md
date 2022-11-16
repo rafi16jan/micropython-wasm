@@ -87,7 +87,7 @@ html = response.text().wait() #Returns HTML string
 Javascript API
 ---
 
-The following functions have been exposed to Kavascript.
+The following functions have been exposed to Javascript.
 
 ```
 init(stack_size)
